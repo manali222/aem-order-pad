@@ -1,5 +1,5 @@
 // Magento GraphQL endpoint — update this to your Commerce 2.4.7 instance
-const MAGENTO_GRAPHQL_URL = 'https://your-magento-instance.com/graphql';
+const MAGENTO_GRAPHQL_URL = 'https://app.mageclone-source.test/graphql';
 
 function debounce(fn, delay) {
   let timer;
