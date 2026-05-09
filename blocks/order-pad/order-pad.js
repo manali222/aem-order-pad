@@ -86,14 +86,13 @@ async function submitOrder(items) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(graphqlQuery),
     });
-    const { data } = await resp.json();
-    return data.submitQuickOrder;
+    const result = await resp.json();
+    if (result.errors) {
+      return { order_id: null, status: 'error', message: result.errors[0].message };
+    }
+    return result.data.submitQuickOrder;
   } catch {
-    return {
-      order_id: `MOCK-${Date.now()}`,
-      status: 'pending',
-      message: 'Order submitted (mock)',
-    };
+    return { order_id: null, status: 'error', message: 'Unable to connect to server.' };
   }
 }
 
@@ -124,30 +123,13 @@ async function fetchOrderHistory() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(graphqlQuery),
     });
-    const { data } = await resp.json();
-    return data.quickOrderHistory.items;
+    const result = await resp.json();
+    if (result.errors) {
+      return { error: result.errors[0].message };
+    }
+    return { items: result.data.quickOrderHistory.items };
   } catch {
-    return [
-      {
-        order_id: 'MOCK-1001',
-        created_at: '2026-05-08 10:30:00',
-        status: 'completed',
-        line_items: [
-          {
-            sku: 'WH-01',
-            name: 'Widget Pro',
-            qty: 5,
-            price: 29.99,
-          },
-          {
-            sku: 'GD-02',
-            name: 'Gadget Plus',
-            qty: 2,
-            price: 49.99,
-          },
-        ],
-      },
-    ];
+    return { error: 'Unable to connect to server.' };
   }
 }
 
@@ -232,7 +214,12 @@ function createOrderRow(container) {
   return row;
 }
 
-function renderOrderHistory(historyContainer, orders) {
+function renderOrderHistory(historyContainer, result) {
+  if (result.error) {
+    historyContainer.innerHTML = `<p class="no-orders">${result.error}</p>`;
+    return;
+  }
+  const orders = result.items || [];
   if (!orders.length) {
     historyContainer.innerHTML = '<p class="no-orders">No orders yet.</p>';
     return;
@@ -330,8 +317,13 @@ export default async function decorate(block) {
 
     const result = await submitOrder(items);
     const msg = formSection.querySelector('.order-message');
-    msg.textContent = `Order ${result.order_id} \u2014 ${result.message}`;
-    msg.className = 'order-message success';
+    if (result.status === 'error') {
+      msg.textContent = result.message;
+      msg.className = 'order-message error';
+    } else {
+      msg.textContent = `Order ${result.order_id} \u2014 ${result.message}`;
+      msg.className = 'order-message success';
+    }
     msg.hidden = false;
 
     btn.disabled = false;
